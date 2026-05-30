@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO Campaigns — Main Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%); color: white; padding: 28px 40px; }
+  .header h1 { font-size: 24px; font-weight: 800; letter-spacing: 0.3px; }
+  .header p  { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+
+  .container { max-width: 1380px; margin: 0 auto; padding: 28px 32px; }
+
+  /* SUMMARY SCORECARDS */
+  .summary { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; margin-bottom: 28px; }
+  .sc { background: white; border-radius: 12px; padding: 20px 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-top: 4px solid #e2e8f0; }
+  .sc.blue   { border-top-color: #3b82f6; }
+  .sc.green  { border-top-color: #22c55e; }
+  .sc.orange { border-top-color: #f59e0b; }
+  .sc.red    { border-top-color: #ef4444; }
+  .sc.purple { border-top-color: #a855f7; }
+  .sc-label  { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .sc-value  { font-size: 32px; font-weight: 800; margin-top: 6px; color: #1a1a2e; }
+  .sc-sub    { font-size: 12px; color: #64748b; margin-top: 3px; }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .section-header h2 { font-size: 15px; font-weight: 700; color: #374151; }
+  .section-header span { font-size: 12px; color: #94a3b8; }
+
+  /* CLIENT GRID */
+  .clients-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+  /* CLIENT CARD */
+  .client-card {
+    background: white; border-radius: 14px; padding: 0;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    overflow: hidden; border: 1.5px solid transparent;
+  }
+  .client-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #3b82f6;
+  }
+
+  .card-top { display: flex; align-items: center; gap: 12px; padding: 18px 20px 12px; }
+  .card-icon { font-size: 26px; flex-shrink: 0; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 700; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-industry { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 500; }
+  .card-pct { font-size: 20px; font-weight: 800; flex-shrink: 0; }
+  .pct-high { color: #16a34a; }
+  .pct-mid  { color: #d97706; }
+  .pct-low  { color: #dc2626; }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    display: flex; height: 6px; width: 100%; background: #f1f5f9;
+  }
+  .seg { height: 100%; transition: width 0.3s; }
+  .seg-done  { background: #22c55e; }
+  .seg-doing { background: #3b82f6; }
+  .seg-wait  { background: #f59e0b; }
+  .seg-ready { background: #e2e8f0; }
+
+  /* CARD STATS */
+  .card-stats {
+    display: grid; grid-template-columns: repeat(5,1fr);
+    padding: 14px 16px 10px; gap: 6px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .stat-item { text-align: center; padding: 4px 2px; border-radius: 6px; }
+  .stat-item.green  { background: #f0fdf4; }
+  .stat-item.blue   { background: #eff6ff; }
+  .stat-item.orange { background: #fffbeb; }
+  .stat-item.purple { background: #faf5ff; }
+  .stat-val { font-size: 18px; font-weight: 800; color: #1a1a2e; line-height: 1.2; }
+  .stat-item.green  .stat-val { color: #16a34a; }
+  .stat-item.blue   .stat-val { color: #1d4ed8; }
+  .stat-item.orange .stat-val { color: #d97706; }
+  .stat-item.purple .stat-val { color: #7c3aed; }
+  .stat-lbl { font-size: 9px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px; }
+
+  /* CARD FOOTER */
+  .card-footer {
+    padding: 10px 20px;
+    font-size: 12px; font-weight: 600; color: #3b82f6;
+    display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  }
+  .card-footer .arrow { font-size: 14px; transition: transform 0.15s; }
+  .client-card:hover .card-footer .arrow { transform: translateX(4px); }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 20px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  @media (max-width: 1024px) { .clients-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 640px)  { .clients-grid { grid-template-columns: 1fr; } .summary { grid-template-columns: repeat(2,1fr); } }
+
+  /* DISTRIBUTION SECTION */
+  .dist-section { background: white; border-radius: 14px; padding: 24px 28px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); margin-top: 28px; }
+  .dist-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .dist-header h2 { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+  .dist-sub { font-size: 12px; font-weight: 400; color: #94a3b8; margin-left: 6px; }
+  .dist-desc { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .dist-legend { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .leg-chip { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+
+  .avg-line-wrap { position: relative; height: 18px; margin-bottom: 4px; padding: 0 170px 0 160px; }
+  .avg-marker { position: absolute; top: 0; transform: translateX(-50%); }
+  .avg-line { width: 2px; height: 100%; background: #94a3b8; margin: 0 auto; border-top: 3px dashed #94a3b8; }
+  .avg-label { font-size: 10px; color: #94a3b8; white-space: nowrap; transform: translateX(-50%); text-align: center; }
+
+  .members-list { display: flex; flex-direction: column; gap: 10px; }
+  .member-row { display: flex; align-items: center; gap: 12px; }
+  .member-name { font-size: 13px; font-weight: 600; color: #374151; min-width: 140px; flex-shrink: 0; }
+  .member-bar-wrap { flex: 1; background: #f1f5f9; border-radius: 20px; height: 12px; overflow: hidden; }
+  .member-bar-fill { height: 100%; border-radius: 20px; transition: width 0.4s ease; }
+  .member-credits { font-size: 15px; font-weight: 800; color: #1a1a2e; min-width: 52px; text-align: right; flex-shrink: 0; }
+  .member-tasks { font-size: 11px; color: #94a3b8; min-width: 160px; flex-shrink: 0; }
+  .load-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+  .tag-high { background: #fee2e2; color: #b91c1c; }
+  .tag-mid  { background: #fef3c7; color: #92400e; }
+  .tag-ok   { background: #dcfce7; color: #15803d; }
+  .tag-low  { background: #f1f5f9; color: #64748b; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SEO Campaigns — Overview Dashboard</h1>
+  <p>All active client campaigns · Current Tasks &amp; Backlog · May 2026 · Click any card to open client dashboard</p>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY SCORECARDS -->
+  <div class="summary">
+    <div class="sc blue">
+      <div class="sc-label">Active Clients</div>
+      <div class="sc-value">9</div>
+      <div class="sc-sub">Campaigns tracked</div>
+    </div>
+    <div class="sc blue">
+      <div class="sc-label">Total Tasks</div>
+      <div class="sc-value">198</div>
+      <div class="sc-sub">Across all clients</div>
+    </div>
+    <div class="sc green">
+      <div class="sc-label">Completed</div>
+      <div class="sc-value">141</div>
+      <div class="sc-sub">71% overall completion</div>
+    </div>
+    <div class="sc orange">
+      <div class="sc-label">In Progress</div>
+      <div class="sc-value">24</div>
+      <div class="sc-sub">Actively being worked</div>
+    </div>
+    <div class="sc purple">
+      <div class="sc-label">Total Credits</div>
+      <div class="sc-value">132.42</div>
+      <div class="sc-sub">Across all campaigns</div>
+    </div>
+  </div>
+
+  <!-- SECTION HEADER + LEGEND -->
+  <div class="section-header">
+    <h2>Client Campaigns</h2>
+    <span>Click any card to open that client's dashboard</span>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#22c55e;"></div> Done</div>
+    <div class="leg"><div class="leg-dot" style="background:#3b82f6;"></div> In Progress</div>
+    <div class="leg"><div class="leg-dot" style="background:#f59e0b;"></div> Waiting</div>
+    <div class="leg"><div class="leg-dot" style="background:#e2e8f0;"></div> Ready to Start</div>
+  </div>
+
+  <!-- CLIENT CARDS -->
+  <div class="clients-grid">
+    
+    <div class="client-card" onclick="window.open('Dashboard_Sterling_Associates.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">⚖️</div>
+        <div class="card-info">
+          <div class="card-name">Sterling & Associates</div>
+          <div class="card-industry">Legal</div>
+        </div>
+        <div class="card-pct pct-high">87%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:87%" title="Done: 13"></div>
+      <div class="seg seg-doing" style="width:0%" title="Doing: 0"></div>
+      <div class="seg seg-wait"  style="width:0%" title="Waiting: 0"></div>
+      <div class="seg seg-ready" style="width:13%" title="Ready: 2"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">15</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">13</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">10.25</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Hartley_Construction.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">🏗️</div>
+        <div class="card-info">
+          <div class="card-name">Hartley Construction Group</div>
+          <div class="card-industry">Construction</div>
+        </div>
+        <div class="card-pct pct-mid">67%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:67%" title="Done: 8"></div>
+      <div class="seg seg-doing" style="width:17%" title="Doing: 2"></div>
+      <div class="seg seg-wait"  style="width:8%" title="Waiting: 1"></div>
+      <div class="seg seg-ready" style="width:8%" title="Ready: 1"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">12</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">8</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">10.0</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Pinnacle_Vapor.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">🛒</div>
+        <div class="card-info">
+          <div class="card-name">Pinnacle Vapor Co.</div>
+          <div class="card-industry">Retail</div>
+        </div>
+        <div class="card-pct pct-mid">55%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:55%" title="Done: 23"></div>
+      <div class="seg seg-doing" style="width:21%" title="Doing: 9"></div>
+      <div class="seg seg-wait"  style="width:7%" title="Waiting: 3"></div>
+      <div class="seg seg-ready" style="width:17%" title="Ready: 7"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">42</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">23</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">9</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">3</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">36.0</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Gallagher_Partners.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">💼</div>
+        <div class="card-info">
+          <div class="card-name">Gallagher & Partners</div>
+          <div class="card-industry">Professional Services</div>
+        </div>
+        <div class="card-pct pct-high">94%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:94%" title="Done: 33"></div>
+      <div class="seg seg-doing" style="width:6%" title="Doing: 2"></div>
+      <div class="seg seg-wait"  style="width:0%" title="Waiting: 0"></div>
+      <div class="seg seg-ready" style="width:0%" title="Ready: 0"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">35</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">33</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">9.5</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Meridian_Solutions.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">💻</div>
+        <div class="card-info">
+          <div class="card-name">Meridian Solutions Inc.</div>
+          <div class="card-industry">Tech / SaaS</div>
+        </div>
+        <div class="card-pct pct-mid">50%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:50%" title="Done: 1"></div>
+      <div class="seg seg-doing" style="width:0%" title="Doing: 0"></div>
+      <div class="seg seg-wait"  style="width:50%" title="Waiting: 1"></div>
+      <div class="seg seg-ready" style="width:0%" title="Ready: 0"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">2.5</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Bradford_Criminal_Law.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">⚖️</div>
+        <div class="card-info">
+          <div class="card-name">Bradford Criminal Law</div>
+          <div class="card-industry">Legal</div>
+        </div>
+        <div class="card-pct pct-mid">57%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:57%" title="Done: 16"></div>
+      <div class="seg seg-doing" style="width:14%" title="Doing: 4"></div>
+      <div class="seg seg-wait"  style="width:21%" title="Waiting: 6"></div>
+      <div class="seg seg-ready" style="width:7%" title="Ready: 2"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">28</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">16</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">4</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">6</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">43.5</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Summit_Fleet.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">🚛</div>
+        <div class="card-info">
+          <div class="card-name">Summit Fleet Solutions</div>
+          <div class="card-industry">Automotive</div>
+        </div>
+        <div class="card-pct pct-high">83%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:83%" title="Done: 15"></div>
+      <div class="seg seg-doing" style="width:6%" title="Doing: 1"></div>
+      <div class="seg seg-wait"  style="width:6%" title="Waiting: 1"></div>
+      <div class="seg seg-ready" style="width:6%" title="Ready: 1"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">18</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">15</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">1</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">6.17</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_Horizon_Projects.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">🏗️</div>
+        <div class="card-info">
+          <div class="card-name">Horizon Projects Group</div>
+          <div class="card-industry">Construction/Eng.</div>
+        </div>
+        <div class="card-pct pct-mid">57%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:57%" title="Done: 16"></div>
+      <div class="seg seg-doing" style="width:21%" title="Doing: 6"></div>
+      <div class="seg seg-wait"  style="width:14%" title="Waiting: 4"></div>
+      <div class="seg seg-ready" style="width:7%" title="Ready: 2"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">28</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">16</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">6</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">4</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">8.0</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+    <div class="client-card" onclick="window.open('Dashboard_BioCore_Lab.html','_blank')">
+      <div class="card-top">
+        <div class="card-icon">🧬</div>
+        <div class="card-info">
+          <div class="card-name">BioCore Lab</div>
+          <div class="card-industry">Health & Wellness</div>
+        </div>
+        <div class="card-pct pct-high">89%</div>
+      </div>
+      <div class="progress-bar">
+      <div class="seg seg-done"  style="width:89%" title="Done: 16"></div>
+      <div class="seg seg-doing" style="width:0%" title="Doing: 0"></div>
+      <div class="seg seg-wait"  style="width:0%" title="Waiting: 0"></div>
+      <div class="seg seg-ready" style="width:11%" title="Ready: 2"></div>
+    </div>
+      <div class="card-stats">
+        <div class="stat-item">
+          <div class="stat-val">18</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat-item green">
+          <div class="stat-val">16</div>
+          <div class="stat-lbl">Done</div>
+        </div>
+        <div class="stat-item blue">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">In Progress</div>
+        </div>
+        <div class="stat-item orange">
+          <div class="stat-val">0</div>
+          <div class="stat-lbl">Waiting</div>
+        </div>
+        <div class="stat-item purple">
+          <div class="stat-val">6.5</div>
+          <div class="stat-lbl">Credits</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        View Dashboard <span class="arrow">→</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREDITS DISTRIBUTION -->
+  <div class="dist-section">
+    <div class="dist-header">
+      <div>
+        <h2>Credits per Team Member <span class="dist-sub">across all campaigns</span></h2>
+        <p class="dist-desc">Use this to check workload balance. Average: <strong>10.79 credits</strong> per person · Total: <strong>129.43 credits</strong></p>
+      </div>
+      <div class="dist-legend">
+        <span class="leg-chip" style="background:#fee2e2;color:#b91c1c;">Heavy (&gt;1.5× avg)</span>
+        <span class="leg-chip" style="background:#fef3c7;color:#92400e;">Above avg</span>
+        <span class="leg-chip" style="background:#dcfce7;color:#15803d;">Balanced</span>
+        <span class="leg-chip" style="background:#f1f5f9;color:#64748b;">Light</span>
+      </div>
+    </div>
+    <div class="avg-line-wrap">
+      <div class="avg-marker" style="left:34%">
+        <div class="avg-line"></div>
+        <div class="avg-label">Avg 10.79</div>
+      </div>
+    </div>
+    <div class="members-list">
+        <div class="member-row">
+          <div class="member-name">Tyler Ross</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:100%;background:#ef4444;"></div>
+          </div>
+          <div class="member-credits">32.00</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Gallagher & Partners, Hartley Construction Group, Horizon Projects Group, Pinnacle Vapor Co., Sterling & Associates, Summit Fleet Solutions">22 tasks · 7 campaigns</div>
+          <span class="load-tag tag-high">Heavy</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Sofia Martinez</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:94%;background:#ef4444;"></div>
+          </div>
+          <div class="member-credits">30.00</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Gallagher & Partners, Horizon Projects Group">12 tasks · 3 campaigns</div>
+          <span class="load-tag tag-high">Heavy</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Marcus Chen</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:55%;background:#ef4444;"></div>
+          </div>
+          <div class="member-credits">17.75</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Gallagher & Partners, Horizon Projects Group, Pinnacle Vapor Co., Sterling & Associates">24 tasks · 5 campaigns</div>
+          <span class="load-tag tag-high">Heavy</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Ryan Patel</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:39%;background:#f59e0b;"></div>
+          </div>
+          <div class="member-credits">12.50</div>
+          <div class="member-tasks" title="BioCore Lab, Bradford Criminal Law, Hartley Construction Group, Sterling & Associates">5 tasks · 4 campaigns</div>
+          <span class="load-tag tag-mid">Above avg</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Sam Kim</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:25%;background:#22c55e;"></div>
+          </div>
+          <div class="member-credits">7.92</div>
+          <div class="member-tasks" title="BioCore Lab, Gallagher & Partners, Hartley Construction Group, Pinnacle Vapor Co., Summit Fleet Solutions">57 tasks · 5 campaigns</div>
+          <span class="load-tag tag-ok">Balanced</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Jordan Blake</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:23%;background:#22c55e;"></div>
+          </div>
+          <div class="member-credits">7.38</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Gallagher & Partners, Hartley Construction Group, Meridian Solutions Inc., Pinnacle Vapor Co., Sterling & Associates, Summit Fleet Solutions">21 tasks · 7 campaigns</div>
+          <span class="load-tag tag-ok">Balanced</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Alex Turner</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:22%;background:#22c55e;"></div>
+          </div>
+          <div class="member-credits">7.00</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Gallagher & Partners, Hartley Construction Group, Pinnacle Vapor Co., Summit Fleet Solutions">11 tasks · 5 campaigns</div>
+          <span class="load-tag tag-ok">Balanced</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Casey Morgan</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:22%;background:#22c55e;"></div>
+          </div>
+          <div class="member-credits">6.88</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Horizon Projects Group, Pinnacle Vapor Co., Sterling & Associates">20 tasks · 4 campaigns</div>
+          <span class="load-tag tag-ok">Balanced</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Priya Sharma</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:14%;background:#94a3b8;"></div>
+          </div>
+          <div class="member-credits">4.50</div>
+          <div class="member-tasks" title="Hartley Construction Group, Horizon Projects Group">9 tasks · 2 campaigns</div>
+          <span class="load-tag tag-low">Light</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Chris Davis</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:6%;background:#94a3b8;"></div>
+          </div>
+          <div class="member-credits">2.00</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Meridian Solutions Inc.">2 tasks · 2 campaigns</div>
+          <span class="load-tag tag-low">Light</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Dana Webb</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:5%;background:#94a3b8;"></div>
+          </div>
+          <div class="member-credits">1.50</div>
+          <div class="member-tasks" title="Bradford Criminal Law, Pinnacle Vapor Co.">2 tasks · 2 campaigns</div>
+          <span class="load-tag tag-low">Light</span>
+        </div>
+        <div class="member-row">
+          <div class="member-name">Jamie Rivera</div>
+          <div class="member-bar-wrap">
+            <div class="member-bar-fill" style="width:0%;background:#94a3b8;"></div>
+          </div>
+          <div class="member-credits">0.00</div>
+          <div class="member-tasks" title="Gallagher & Partners">1 tasks · 1 campaign</div>
+          <span class="load-tag tag-low">Light</span>
+        </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

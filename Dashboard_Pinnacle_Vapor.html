@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinnacle Vapor Co. — Task Dashboard</title>
+<style>
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%); color: white; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left h1 { font-size: 22px; font-weight: 700; }
+  .header-left p  { font-size: 13px; color: #94a3b8; margin-top: 3px; }
+  .header-right   { font-size: 12px; color: #64748b; text-align: right; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 28px; }
+  .scorecards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
+  .card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-top: 4px solid #e2e8f0; }
+  .card.blue   { border-top-color: #3b82f6; }
+  .card.green  { border-top-color: #22c55e; }
+  .card.orange { border-top-color: #f59e0b; }
+  .card.red    { border-top-color: #ef4444; }
+  .card.purple { border-top-color: #a855f7; }
+  .card-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-value { font-size: 30px; font-weight: 800; margin-top: 6px; }
+  .card-sub   { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 20px; }
+  .chart-card h3 { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; }
+  .filter-bar { background: white; border-radius: 12px; padding: 14px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .filter-bar label { font-size: 12px; font-weight: 600; color: #64748b; }
+  .filter-bar select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 13px; color: #1a1a2e; background: #f8fafc; cursor: pointer; }
+  .filter-bar select:focus { outline: none; border-color: #0f3460; }
+  .btn-reset { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; }
+  .btn-reset:hover { background: #e2e8f0; }
+  .filter-info { font-size: 12px; color: #94a3b8; margin-left: auto; }
+  .flags-section { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 14px; border-left: 4px solid #f59e0b; }
+  .flags-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .flags-header h4 { font-size: 12px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .flags-header span { font-size: 11px; color: #b45309; }
+  .flags-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .flag-btn { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #fde68a; border-radius: 8px; padding: 7px 13px; cursor: pointer; background: #fffbeb; color: #92400e; font-size: 12px; font-weight: 600; transition: all 0.15s; user-select: none; }
+  .flag-btn:hover:not(.zero) { background: #fef3c7; border-color: #fbbf24; }
+  .flag-btn.active { background: #f59e0b; border-color: #d97706; color: white; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
+  .flag-btn.zero { opacity: 0.35; cursor: default; border-style: dashed; }
+  .flag-count { background: #fde68a; color: #92400e; border-radius: 20px; padding: 1px 7px; font-size: 11px; font-weight: 700; min-width: 20px; text-align: center; }
+  .flag-btn.active .flag-count { background: rgba(255,255,255,0.25); color: white; }
+  .flag-count.danger { background: #fee2e2; color: #b91c1c; }
+  .flag-btn.active .flag-count.danger { background: rgba(255,255,255,0.25); color: white; }
+  .table-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .table-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .table-header h3 { font-size: 13px; font-weight: 700; color: #374151; }
+  .view-badge { display: inline-flex; align-items: center; gap: 5px; background: #dbeafe; color: #1d4ed8; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+  .view-badge.flag-view { background: #fef3c7; color: #92400e; }
+  .view-badge button { background: none; border: none; cursor: pointer; font-size: 14px; line-height: 1; color: inherit; padding: 0 0 0 4px; }
+  .search-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 13px; width: 200px; margin-left: auto; }
+  .search-box:focus { outline: none; border-color: #0f3460; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; padding: 8px 12px; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 9px 12px; vertical-align: middle; }
+  .task-name { font-weight: 600; color: #1a1a2e; max-width: 300px; }
+  .task-name a { color: #0f3460; text-decoration: none; }
+  .task-name a:hover { text-decoration: underline; }
+  .hl { background: #fff7ed !important; outline: 1.5px solid #fb923c; outline-offset: -1px; border-radius: 4px; }
+  .pill { display: inline-block; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .pill-done    { background: #dcfce7; color: #16a34a; }
+  .pill-doing   { background: #dbeafe; color: #1d4ed8; }
+  .pill-ready   { background: #fef9c3; color: #b45309; }
+  .pill-waiting { background: #fce7f3; color: #9d174d; }
+  .pill-dont    { background: #fee2e2; color: #b91c1c; font-weight: 700; }
+  .priority-high   { color: #ef4444; font-weight: 700; font-size: 11px; }
+  .priority-medium { color: #f59e0b; font-weight: 700; font-size: 11px; }
+  .priority-low    { color: #94a3b8; font-size: 11px; }
+  .priority-none   { color: #cbd5e1; font-size: 11px; }
+  .credits-val { font-weight: 700; color: #0f3460; }
+  .empty-state { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
+  .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .pagination-info { font-size: 12px; color: #94a3b8; }
+  .pagination-btns { display: flex; gap: 6px; }
+  .page-btn { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; background: white; color: #374151; }
+  .page-btn:hover:not(:disabled) { background: #f1f5f9; }
+  .page-btn.active { background: #0f3460; color: white; border-color: #0f3460; }
+
+
+  /* Credits per person table */
+  .credits-table { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+  .credits-row { display: flex; align-items: center; gap: 12px; }
+  .credits-name { font-size: 13px; font-weight: 600; color: #374151; min-width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .credits-bar-wrap { flex: 1; background: #f1f5f9; border-radius: 20px; height: 10px; overflow: hidden; }
+  .credits-bar-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, #0f3460, #3b82f6); transition: width 0.4s ease; }
+  .credits-num { font-size: 13px; font-weight: 800; color: #0f3460; min-width: 48px; text-align: right; flex-shrink: 0; }
+  .credits-empty { font-size: 13px; color: #94a3b8; padding: 8px 0; }
+
+
+  .home-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1); color: white;
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 8px;
+    padding: 7px 14px; font-size: 12px; font-weight: 600;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .home-btn:hover { background: rgba(255,255,255,0.2); }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Pinnacle Vapor Co. — SEO Task Dashboard</h1>
+    <p>Freedcamp project data · Active tasks export · All tasks &amp; subtasks</p>
+  </div>
+  <div class="header-right"><a href="Main_Dashboard.html" class="home-btn">← All Campaigns</a></div>
+</div>
+
+<div class="container">
+
+  <!-- SCORECARDS -->
+  <div class="scorecards">
+    <div class="card blue">
+      <div class="card-label">Total Tasks</div>
+      <div class="card-value" id="sc-total">—</div>
+      <div class="card-sub" id="sc-total-sub"></div>
+    </div>
+    <div class="card green">
+      <div class="card-label">Completed</div>
+      <div class="card-value" id="sc-done">—</div>
+      <div class="card-sub" id="sc-done-pct"></div>
+    </div>
+    <div class="card orange">
+      <div class="card-label">In Progress</div>
+      <div class="card-value" id="sc-active">—</div>
+      <div class="card-sub">Currently doing</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Waiting / Blocked</div>
+      <div class="card-value" id="sc-waiting">—</div>
+      <div class="card-sub">Waiting or not started</div>
+    </div>
+    <div class="card purple">
+      <div class="card-label">Total Credits</div>
+      <div class="card-value" id="sc-credits">—</div>
+      <div class="card-sub" id="sc-hours"></div>
+    </div>
+  </div>
+
+  <!-- CREDITS PER PERSON -->
+  <div class="chart-card">
+    <h3>Credits per Team Member</h3>
+    <div id="creditsTable" class="credits-table"></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <label>Filter:</label>
+    <select id="filterTaskList">
+      <option value="">All Task Lists</option>
+      <option value="Current Tasks">Current Tasks</option>
+      <option value="Backlog">Backlog</option>
+    </select>
+    <select id="filterStatus">
+      <option value="">All Statuses</option>
+      <option value="Done">Done</option>
+      <option value="Doing">Doing</option>
+      <option value="Ready to Start">Ready to Start</option>
+      <option value="Waiting - Client">Waiting - Client</option>
+      <option value="Don't Start">Don't Start</option>
+    </select>
+    <select id="filterMonth">
+      <option value="">All Months</option>
+      <option value="2 - Feb">Feb</option>
+      <option value="4 - Apr">Apr</option>
+      <option value="5 - May">May</option>
+    </select>
+    <select id="filterAssignee">
+      <option value="">All Assignees</option>
+    </select>
+    <select id="filterType">
+      <option value="">Tasks + Subtasks</option>
+      <option value="Task">Tasks only</option>
+    </select>
+    <button class="btn-reset" onclick="resetAll()">Reset</button>
+    <span class="filter-info" id="filterInfo"></span>
+  </div>
+
+  <!-- FLAGS -->
+  <div class="flags-section">
+    <div class="flags-header">
+      <span>⚑</span>
+      <h4>Flagged Issues</h4>
+      <span>— counts reflect current view · click to drill in · click again to clear</span>
+    </div>
+    <div class="flags-grid" id="flagsGrid"></div>
+  </div>
+
+  <!-- TASK TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Task List <span id="table-count" style="color:#94a3b8;font-weight:400;"></span></h3>
+      <span id="viewBadge" style="display:none;"></span>
+      <input class="search-box" id="searchBox" type="text" placeholder="Search tasks…" oninput="renderTable()">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Task Name</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Month</th>
+          <th>Est. Min</th>
+          <th>Credits</th>
+          <th>Due Date</th>
+          <th>Task List</th>
+        </tr>
+      </thead>
+      <tbody id="taskTableBody"></tbody>
+    </table>
+    <div class="pagination">
+      <div class="pagination-info" id="paginationInfo"></div>
+      <div class="pagination-btns" id="paginationBtns"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW_TASKS = [{"id": "69397303", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Review and Quality Check – Pinnacle Vapor Co. Product Descriptions", "assigned_to": "Alex Turner", "status": "Waiting - Client", "priority": "Low", "due_date": "2026-03-06", "url": "https://freedcamp.com/view/3496329/tasks/69397303", "month": "2 - Feb", "month_raw": "1", "est_minutes": 247.0, "credits": 0.0, "has_description": false}, {"id": "69397313", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "VA Review – Pinnacle Vapor Co. 175 Product Descriptions (Half)", "assigned_to": "Casey Morgan", "status": "Done", "priority": "Low", "due_date": "2026-03-06", "url": "https://freedcamp.com/view/3496329/tasks/69397313", "month": "2 - Feb", "month_raw": "1", "est_minutes": 180.0, "credits": 0.75, "has_description": false}, {"id": "69397350", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Copywriter Quality Check – Pinnacle Vapor Co. 30 Product Descriptions", "assigned_to": "Alex Turner", "status": "Done", "priority": "Low", "due_date": "2026-03-06", "url": "https://freedcamp.com/view/3496329/tasks/69397350", "month": "2 - Feb", "month_raw": "1", "est_minutes": 67.0, "credits": 0.75, "has_description": false}, {"id": "69427348", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Send to client for Review and Approval", "assigned_to": "Dana Webb", "status": "Waiting - Client", "priority": "Low", "due_date": "2026-03-06", "url": "https://freedcamp.com/view/3496329/tasks/69427348", "month": "2 - Feb", "month_raw": "1", "est_minutes": 15.0, "credits": 0.0, "has_description": false}, {"id": "70503410", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Product Pages Descriptions", "assigned_to": "Alex Turner", "status": "Ready to Start", "priority": "Medium", "due_date": "2026-04-17", "url": "https://freedcamp.com/view/3496329/tasks/70503410", "month": "4 - Apr", "month_raw": "3", "est_minutes": 405.0, "credits": 4.5, "has_description": false}, {"id": "70674429", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Implement Tiered Linking & Indexation for Acquired Links - Part 2 (April)", "assigned_to": "Marcus Chen", "status": "Doing", "priority": "Low", "due_date": "2026-04-30", "url": "https://freedcamp.com/view/3496329/tasks/70674429", "month": "4 - Apr", "month_raw": "3", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"id": "70506281", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Tiered Links for Acquired Links", "assigned_to": "Marcus Chen", "status": "Done", "priority": "Medium", "due_date": "2026-04-17", "url": "https://freedcamp.com/view/3496329/tasks/70506281", "month": "4 - Apr", "month_raw": "3", "est_minutes": 90.0, "credits": 2.0, "has_description": false}, {"id": "70506282", "type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Indexation of Tiered Links", "assigned_to": "Marcus Chen", "status": "Doing", "priority": "Medium", "due_date": "2026-04-17", "url": "https://freedcamp.com/view/3496329/tasks/70506282", "month": "4 - Apr", "month_raw": "3", "est_minutes": 90.0, "credits": 0.25, "has_description": false}, {"id": "71043180", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Link Building (1200 CAD Budget) (May)", "assigned_to": "Tyler Ross", "status": "Waiting - Vendor", "priority": "Medium", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043180", "month": "5 - May", "month_raw": "4", "est_minutes": 1343.0, "credits": 15.0, "has_description": false}, {"id": "71043188", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement Tiered Linking & Indexation for Acquired Links (May)", "assigned_to": "Marcus Chen", "status": "Doing", "priority": "Low", "due_date": "2026-05-22", "url": "https://freedcamp.com/view/3496329/tasks/71043188", "month": "4 - Apr", "month_raw": "3", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"id": "71043189", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Tiered Links for Acquired Links", "assigned_to": "Marcus Chen", "status": "Doing", "priority": "Medium", "due_date": "2026-05-22", "url": "https://freedcamp.com/view/3496329/tasks/71043189", "month": "4 - Apr", "month_raw": "3", "est_minutes": 480.0, "credits": 2.0, "has_description": false}, {"id": "71043190", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Indexation of Tiered Links", "assigned_to": "Marcus Chen", "status": "Ready to Start", "priority": "Medium", "due_date": "2026-05-22", "url": "https://freedcamp.com/view/3496329/tasks/71043190", "month": "4 - Apr", "month_raw": "3", "est_minutes": 240.0, "credits": 1.0, "has_description": false}, {"id": "71042996", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement Optimized Location Pages for Pinnacle Vapor Co. (Continuation)", "assigned_to": "Unassigned", "status": "Doing", "priority": "Low", "due_date": "2026-05-29", "url": "https://freedcamp.com/view/3496329/tasks/71042996", "month": "5 - May", "month_raw": "4", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"id": "71042997", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Barrie Location", "assigned_to": "Jordan Blake", "status": "Done", "priority": "Medium", "due_date": "", "url": "https://freedcamp.com/view/3496329/tasks/71042997", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.25, "has_description": false}, {"id": "71043005", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Calgary Location", "assigned_to": "Marcus Chen", "status": "Ready to Start", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043005", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043111", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Hamilton Location", "assigned_to": "Marcus Chen", "status": "Ready to Start", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043111", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043112", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Kingston Location", "assigned_to": "Marcus Chen", "status": "Ready to Start", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043112", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043115", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Kitchener-Waterloo Location", "assigned_to": "Casey Morgan", "status": "Doing", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043115", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043117", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for London Location", "assigned_to": "Casey Morgan", "status": "Doing", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043117", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043118", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Implement optimized location page for Markham Location", "assigned_to": "Casey Morgan", "status": "Doing", "priority": "Medium", "due_date": "2026-05-20", "url": "https://freedcamp.com/view/3496329/tasks/71043118", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043209", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Keyword Research for Attribute Keywords (Flavours)", "assigned_to": "Tyler Ross", "status": "Done", "priority": "Medium", "due_date": "2026-05-22", "url": "https://freedcamp.com/view/3496329/tasks/71043209", "month": "5 - May", "month_raw": "4", "est_minutes": 270.0, "credits": 2.0, "has_description": false}, {"id": "71043258", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Provide Website Technical Audit & Recommendations", "assigned_to": "Tyler Ross", "status": "Doing", "priority": "High", "due_date": "2026-05-11", "url": "https://freedcamp.com/view/3496329/tasks/71043258", "month": "5 - May", "month_raw": "4", "est_minutes": 225.0, "credits": 2.5, "has_description": false}, {"id": "71043263", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Generate and implement review responses for Pinnacle Vapor Co. Brampton GBP (May)", "assigned_to": "Sam Kim", "status": "Ready to Start", "priority": "None", "due_date": "2026-05-29", "url": "https://freedcamp.com/view/3496329/tasks/71043263", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.25, "has_description": false}, {"id": "71043264", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "4 x GBP Posts for Pinnacle Vapor Co. Brampton (May)", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043264", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043265", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Write/Generate GBP Posts Content", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043265", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043266", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Create and Edit GBP Post Images", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043266", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043267", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Review GBP Post Copy", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043267", "month": "5 - May", "month_raw": "4", "est_minutes": 30.0, "credits": 0.0, "has_description": false}, {"id": "71043268", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Set Geo-Tagged Images", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043268", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043269", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Ensure UTM Parameters in Links", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043269", "month": "5 - May", "month_raw": "4", "est_minutes": 30.0, "credits": 0.0, "has_description": false}, {"id": "71043270", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Publish GBP Posts", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043270", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043271", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Send GBP Post Copy to the Client for Review", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043271", "month": "5 - May", "month_raw": "4", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"id": "71043273", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Generate and implement review responses for Pinnacle Vapor Co. Mississauga GBP (May)", "assigned_to": "Sam Kim", "status": "Ready to Start", "priority": "None", "due_date": "2026-05-29", "url": "https://freedcamp.com/view/3496329/tasks/71043273", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.25, "has_description": false}, {"id": "71043274", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "4 x GBP Posts for Pinnacle Vapor Co. Mississauga (May)", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043274", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.5, "has_description": false}, {"id": "71043275", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Write/Generate GBP Posts Content", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043275", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043276", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Create and Edit GBP Post Images", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043276", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043277", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Review GBP Post Copy", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043277", "month": "5 - May", "month_raw": "4", "est_minutes": 30.0, "credits": 0.0, "has_description": false}, {"id": "71043278", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Set Geo-Tagged Images", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043278", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043279", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Ensure UTM Parameters in Links", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043279", "month": "5 - May", "month_raw": "4", "est_minutes": 30.0, "credits": 0.0, "has_description": false}, {"id": "71043280", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Publish GBP Posts", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043280", "month": "5 - May", "month_raw": "4", "est_minutes": 60.0, "credits": 0.0, "has_description": false}, {"id": "71043281", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Send GBP Post Copy to the Client for Review", "assigned_to": "Sam Kim", "status": "Done", "priority": "High", "due_date": "2026-05-08", "url": "https://freedcamp.com/view/3496329/tasks/71043281", "month": "5 - May", "month_raw": "4", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"id": "71043283", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Upload 5 GBP Photos for Pinnacle Vapor Co. Brampton (May)", "assigned_to": "Sam Kim", "status": "Done", "priority": "Medium", "due_date": "2026-05-29", "url": "https://freedcamp.com/view/3496329/tasks/71043283", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.25, "has_description": false}, {"id": "71043284", "type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Upload 5 GBP Photos for Pinnacle Vapor Co. Mississauga (May)", "assigned_to": "Sam Kim", "status": "Done", "priority": "Medium", "due_date": "2026-05-29", "url": "https://freedcamp.com/view/3496329/tasks/71043284", "month": "5 - May", "month_raw": "4", "est_minutes": 120.0, "credits": 0.25, "has_description": false}];
+const DEFAULT_MONTH_STR   = "5 - May";
+const DEFAULT_BADGE_LABEL = "May &amp; Backlog";
+
+const FLAG_DEFS = [
+  { key:'no_priority',    icon:'\u{1F6A9}', label:'No Priority',    danger:false, fn: t => !t.priority || t.priority === 'None' },
+  { key:'no_month',       icon:'\u{1F4C5}', label:'No Month',       danger:false, fn: t => t.month === '0 - Unassigned' },
+  { key:'no_est_time',    icon:'⏱',    label:'No Est. Time',   danger:false, fn: t => t.est_minutes === 0 },
+  { key:'no_credits',     icon:'\u{1F4B3}', label:'No Credits',     danger:false, fn: t => t.credits === 0 },
+  { key:'no_due_date',    icon:'\u{1F4CC}', label:'No Due Date',    danger:false, fn: t => !t.due_date },
+  { key:'no_assignee',    icon:'\u{1F464}', label:'No Assignee',    danger:false, fn: t => t.assigned_to === 'Unassigned' },
+  { key:'no_description', icon:'\u{1F4DD}', label:'No Description', danger:false, fn: t => !t.has_description },
+  { key:'dont_start',     icon:'\u{1F6AB}', label:"Don't Start",    danger:true,  fn: t => t.status === "Don't Start" },
+];
+const FLAG_HIGHLIGHT = {
+  no_priority:    'priority',
+  no_month:       'month',
+  no_est_time:    'est_minutes',
+  no_credits:     'credits',
+  no_due_date:    'due_date',
+  no_assignee:    'assigned_to',
+  no_description: 'name',
+  dont_start:     'status',
+};
+
+let baseFilteredTasks = [];
+let displayTasks      = [];
+let activeFlag        = null;
+let currentPage       = 1;
+const PAGE_SIZE       = 20;
+
+document.addEventListener('DOMContentLoaded', () => {
+  populateAssigneeFilter();
+  buildFlagGrid();
+  applyDefaultFilter();
+});
+
+function populateAssigneeFilter() {
+  const people = new Set();
+  RAW_TASKS.forEach(t => {
+    const n = (t.assigned_to || '').trim();
+    if (n && n !== 'Unassigned') people.add(n);
+  });
+  const sel = document.getElementById('filterAssignee');
+  [...people].sort().forEach(n => {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n; sel.appendChild(o);
+  });
+}
+
+function buildFlagGrid() {
+  const grid = document.getElementById('flagsGrid');
+  FLAG_DEFS.forEach(def => {
+    const btn = document.createElement('button');
+    btn.className = 'flag-btn';
+    btn.id = 'flag-' + def.key;
+    btn.onclick = () => toggleFlag(def.key);
+    btn.innerHTML = '<span>' + def.icon + '</span><span>' + def.label + '</span>'
+      + '<span class="flag-count' + (def.danger ? ' danger' : '') + '" id="fcount-' + def.key + '">0</span>';
+    grid.appendChild(btn);
+  });
+}
+
+function refreshFlagCounts() {
+  FLAG_DEFS.forEach(def => {
+    const count = baseFilteredTasks.filter(def.fn).length;
+    const countEl = document.getElementById('fcount-' + def.key);
+    if (countEl) countEl.textContent = count;
+    const btn = document.getElementById('flag-' + def.key);
+    if (btn) {
+      btn.classList.toggle('zero', count === 0);
+      if (count === 0 && activeFlag === def.key) {
+        activeFlag = null;
+        btn.classList.remove('active');
+      }
+    }
+  });
+}
+
+function applyDefaultFilter() {
+  baseFilteredTasks = RAW_TASKS.filter(t =>
+    (DEFAULT_MONTH_STR && t.month === DEFAULT_MONTH_STR) || t.task_list === 'Backlog'
+  );
+  if (baseFilteredTasks.length === 0) {
+    baseFilteredTasks = RAW_TASKS.filter(t =>
+      t.task_list === 'Current Tasks' || t.task_list === 'Backlog'
+    );
+  }
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+  displayTasks = [...baseFilteredTasks];
+  currentPage  = 1;
+  setViewBadge('default');
+  refreshFlagCounts();
+  updateAll();
+}
+
+function applyDropdownFilters() {
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+  const f = {
+    taskList: document.getElementById('filterTaskList').value,
+    status:   document.getElementById('filterStatus').value,
+    month:    document.getElementById('filterMonth').value,
+    assignee: document.getElementById('filterAssignee').value,
+    type:     document.getElementById('filterType').value,
+  };
+  const anyActive = Object.values(f).some(Boolean);
+  if (!anyActive) { applyDefaultFilter(); return; }
+  baseFilteredTasks = RAW_TASKS.filter(t => {
+    if (f.taskList && t.task_list !== f.taskList)   return false;
+    if (f.status   && t.status    !== f.status)     return false;
+    if (f.month    && t.month     !== f.month)       return false;
+    if (f.assignee && t.assigned_to !== f.assignee) return false;
+    if (f.type === 'Task' && t.type !== 'Task')     return false;
+    return true;
+  });
+  displayTasks = [...baseFilteredTasks];
+  currentPage  = 1;
+  setViewBadge('filter');
+  refreshFlagCounts();
+  updateAll();
+}
+
+function toggleFlag(key) {
+  const def = FLAG_DEFS.find(d => d.key === key);
+  if (!def) return;
+  if (activeFlag === key) {
+    activeFlag = null;
+    document.getElementById('flag-' + key).classList.remove('active');
+    displayTasks = [...baseFilteredTasks];
+    const anyFilter = ['filterTaskList','filterStatus','filterMonth','filterAssignee','filterType']
+      .some(id => document.getElementById(id).value);
+    setViewBadge(anyFilter ? 'filter' : 'default');
+  } else {
+    if (activeFlag) document.getElementById('flag-' + activeFlag).classList.remove('active');
+    activeFlag = key;
+    document.getElementById('flag-' + key).classList.add('active');
+    displayTasks = baseFilteredTasks.filter(def.fn);
+    setViewBadge('flag', def.label);
+  }
+  currentPage = 1;
+  updateAll();
+}
+
+function resetAll() {
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+  ['filterTaskList','filterStatus','filterMonth','filterAssignee','filterType']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('searchBox').value = '';
+  applyDefaultFilter();
+}
+
+function setViewBadge(mode, label) {
+  const el = document.getElementById('viewBadge');
+  if (mode === 'default') {
+    el.className = 'view-badge';
+    el.innerHTML = '\u{1F4CB} ' + DEFAULT_BADGE_LABEL + ' <button onclick="resetAll()">×</button>';
+    el.style.display = 'inline-flex';
+  } else if (mode === 'flag') {
+    el.className = 'view-badge flag-view';
+    el.innerHTML = '⚑ ' + label + ' <button onclick="resetAll()">×</button>';
+    el.style.display = 'inline-flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function updateScorecards() {
+  const t    = displayTasks;
+  const done    = t.filter(x => x.status === 'Done').length;
+  const active  = t.filter(x => x.status === 'Doing').length;
+  const waiting = t.filter(x => ['Waiting - Client',"Don't Start",'Ready to Start'].includes(x.status)).length;
+  const credits = t.reduce((s,x) => s + (x.credits||0), 0);
+  const mins    = t.reduce((s,x) => s + (x.est_minutes||0), 0);
+  const pct     = t.length ? Math.round(done/t.length*100) : 0;
+  document.getElementById('sc-total').textContent     = t.length;
+  document.getElementById('sc-total-sub').textContent =
+    t.filter(x=>x.type==='Task').length + ' parent · ' + t.filter(x=>x.type!=='Task').length + ' subtasks';
+  document.getElementById('sc-done').textContent      = done;
+  document.getElementById('sc-done-pct').textContent  = pct + '% completion rate';
+  document.getElementById('sc-active').textContent    = active;
+  document.getElementById('sc-waiting').textContent   = waiting;
+  document.getElementById('sc-credits').textContent   = credits.toFixed(2);
+  document.getElementById('sc-hours').textContent     = (mins/60).toFixed(1) + ' est. hours';
+}
+
+function updateChart() {
+  const byPerson = {};
+  displayTasks.forEach(t => {
+    (t.assigned_to || 'Unassigned').split(',').forEach(p => {
+      const n = p.trim() || 'Unassigned';
+      byPerson[n] = (byPerson[n] || 0) + (t.credits || 0);
+    });
+  });
+  const sorted = Object.entries(byPerson)
+    .filter(([,v]) => v > 0)
+    .sort((a,b) => b[1] - a[1]);
+  const max = sorted.length ? sorted[0][1] : 1;
+  const container = document.getElementById('creditsTable');
+  if (!container) return;
+  if (!sorted.length) {
+    container.innerHTML = '<div class="credits-empty">No credits assigned in current view.</div>';
+    return;
+  }
+  container.innerHTML = sorted.map(([name, credits]) => {
+    const pct = Math.round(credits / max * 100);
+    return `<div class="credits-row">
+      <div class="credits-name" title="${name}">${name}</div>
+      <div class="credits-bar-wrap"><div class="credits-bar-fill" style="width:${pct}%"></div></div>
+      <div class="credits-num">${credits % 1 === 0 ? credits : credits.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+}
+
+function pillClass(s) {
+  return { 'Done':'pill-done', 'Doing':'pill-doing', 'Ready to Start':'pill-ready',
+           'Waiting - Client':'pill-waiting', "Don't Start":'pill-dont' }[s] || 'pill-dont';
+}
+function prioritySpan(p) {
+  const cls = { High:'priority-high',Medium:'priority-medium',Low:'priority-low',None:'priority-none' }[p]||'priority-none';
+  return '<span class="' + cls + '">' + (p||'—') + '</span>';
+}
+function depthIndent(type) {
+  if (type==='Task') return '';
+  const pipes = (type.match(/\|/g)||[]).length;
+  return ' '.repeat(pipes*3) + '↳ ';
+}
+
+function renderTable() {
+  const search = document.getElementById('searchBox').value.toLowerCase().trim();
+  const rows   = search ? displayTasks.filter(t=>t.name.toLowerCase().includes(search)) : displayTasks;
+  const total  = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start    = (currentPage-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('table-count').textContent    = '(' + total + ')';
+  document.getElementById('paginationInfo').textContent = total
+    ? 'Showing ' + (start+1) + '–' + Math.min(start+PAGE_SIZE,total) + ' of ' + total : '';
+
+  const hlCol = activeFlag ? FLAG_HIGHLIGHT[activeFlag] : null;
+  const tbody = document.getElementById('taskTableBody');
+
+  if (!pageRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No tasks match.</div></td></tr>';
+  } else {
+    tbody.innerHTML = pageRows.map(t => {
+      const flagDef  = hlCol ? FLAG_DEFS.find(d=>d.key===activeFlag) : null;
+      const needsHl  = flagDef && flagDef.fn(t);
+      const h = col => (needsHl && hlCol===col) ? ' class="hl"' : '';
+
+      const nameHtml = t.url
+        ? depthIndent(t.type) + '<a href="' + t.url + '" target="_blank">' + t.name + '</a>'
+        : depthIndent(t.type) + t.name;
+      const monthLabel = (t.month||'').replace(/^\d+ - /,'') || '—';
+      const credits    = t.credits > 0 ? '<span class="credits-val">' + t.credits + '</span>' : '—';
+      const dueDate    = t.due_date ? t.due_date.substring(0,10) : '—';
+
+      return '<tr>'
+        + '<td class="task-name' + ((hlCol==='name'&&needsHl)?' hl':'') + '">' + nameHtml + '</td>'
+        + '<td style="font-size:12px;"' + h('assigned_to') + '>' + (t.assigned_to||'Unassigned') + '</td>'
+        + '<td' + h('status') + '><span class="pill ' + pillClass(t.status) + '">' + t.status + '</span></td>'
+        + '<td' + h('priority') + '>' + prioritySpan(t.priority) + '</td>'
+        + '<td style="font-size:12px;color:#64748b;"' + h('month') + '>' + monthLabel + '</td>'
+        + '<td style="font-size:12px;color:#64748b;"' + h('est_minutes') + '>' + (t.est_minutes||'—') + '</td>'
+        + '<td' + h('credits') + '>' + credits + '</td>'
+        + '<td style="font-size:12px;color:#64748b;"' + h('due_date') + '>' + dueDate + '</td>'
+        + '<td style="font-size:11px;color:#64748b;">' + t.task_list + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('filterInfo').textContent =
+    displayTasks.length === RAW_TASKS.length
+      ? 'All ' + RAW_TASKS.length + ' tasks'
+      : displayTasks.length + ' of ' + RAW_TASKS.length + ' tasks';
+
+  const btns = document.getElementById('paginationBtns');
+  let html = '<button class="page-btn" onclick="changePage(-1)" ' + (currentPage===1?'disabled':'') + '>← Prev</button>';
+  for (let i=Math.max(1,currentPage-2); i<=Math.min(totalPages,currentPage+2); i++)
+    html += '<button class="page-btn ' + (i===currentPage?'active':'') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+  html += '<button class="page-btn" onclick="changePage(1)" ' + (currentPage===totalPages?'disabled':'') + '>Next →</button>';
+  btns.innerHTML = html;
+}
+
+function changePage(d) { currentPage += d; renderTable(); }
+function goPage(p)      { currentPage  = p; renderTable(); }
+function updateAll()    { updateScorecards(); updateChart(); renderTable(); }
+
+['filterTaskList','filterStatus','filterMonth','filterAssignee','filterType'].forEach(id =>
+  document.getElementById(id).addEventListener('change', applyDropdownFilters)
+);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sterling & Associates — Task Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%); color: white; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left h1 { font-size: 22px; font-weight: 700; }
+  .header-left p  { font-size: 13px; color: #94a3b8; margin-top: 3px; }
+  .header-right   { font-size: 12px; color: #64748b; text-align: right; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 28px; }
+
+  /* SCORECARDS */
+  .scorecards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px; }
+  .card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-top: 4px solid #e2e8f0; }
+  .card.blue   { border-top-color: #3b82f6; }
+  .card.green  { border-top-color: #22c55e; }
+  .card.orange { border-top-color: #f59e0b; }
+  .card.red    { border-top-color: #ef4444; }
+  .card.purple { border-top-color: #a855f7; }
+  .card-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-value { font-size: 30px; font-weight: 800; margin-top: 6px; }
+  .card-sub   { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  /* CHART */
+  .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 20px; }
+  .chart-card h3 { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; }
+
+  /* FILTER BAR */
+  .filter-bar { background: white; border-radius: 12px; padding: 14px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .filter-bar label { font-size: 12px; font-weight: 600; color: #64748b; }
+  .filter-bar select { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 13px; color: #1a1a2e; background: #f8fafc; cursor: pointer; }
+  .filter-bar select:focus { outline: none; border-color: #0f3460; }
+  .btn-reset { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; }
+  .btn-reset:hover { background: #e2e8f0; }
+  .filter-info { font-size: 12px; color: #94a3b8; margin-left: auto; }
+
+  /* FLAGS */
+  .flags-section { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 14px; border-left: 4px solid #f59e0b; }
+  .flags-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .flags-header h4 { font-size: 12px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .flags-header span { font-size: 11px; color: #b45309; }
+  .flags-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .flag-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1.5px solid #fde68a; border-radius: 8px;
+    padding: 7px 13px; cursor: pointer;
+    background: #fffbeb; color: #92400e;
+    font-size: 12px; font-weight: 600;
+    transition: all 0.15s; user-select: none;
+  }
+  .flag-btn:hover:not(.zero) { background: #fef3c7; border-color: #fbbf24; }
+  .flag-btn.active { background: #f59e0b; border-color: #d97706; color: white; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
+  .flag-btn.zero { opacity: 0.35; cursor: default; border-style: dashed; }
+  .flag-count { background: #fde68a; color: #92400e; border-radius: 20px; padding: 1px 7px; font-size: 11px; font-weight: 700; min-width: 20px; text-align: center; }
+  .flag-btn.active .flag-count { background: rgba(255,255,255,0.25); color: white; }
+  .flag-count.danger { background: #fee2e2; color: #b91c1c; }
+  .flag-btn.active .flag-count.danger { background: rgba(255,255,255,0.25); color: white; }
+
+  /* TABLE CARD */
+  .table-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .table-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .table-header h3 { font-size: 13px; font-weight: 700; color: #374151; }
+  .view-badge { display: inline-flex; align-items: center; gap: 5px; background: #dbeafe; color: #1d4ed8; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+  .view-badge.flag-view { background: #fef3c7; color: #92400e; }
+  .view-badge button { background: none; border: none; cursor: pointer; font-size: 14px; line-height: 1; color: inherit; padding: 0 0 0 4px; }
+  .search-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 13px; width: 200px; margin-left: auto; }
+  .search-box:focus { outline: none; border-color: #0f3460; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align: left; padding: 8px 12px; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td { padding: 9px 12px; vertical-align: middle; }
+  .task-name { font-weight: 600; color: #1a1a2e; max-width: 300px; }
+  .task-name a { color: #0f3460; text-decoration: none; }
+  .task-name a:hover { text-decoration: underline; }
+
+  /* flagged cell highlight */
+  .hl { background: #fff7ed !important; outline: 1.5px solid #fb923c; outline-offset: -1px; border-radius: 4px; }
+
+  .pill { display: inline-block; border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .pill-done    { background: #dcfce7; color: #16a34a; }
+  .pill-doing   { background: #dbeafe; color: #1d4ed8; }
+  .pill-ready   { background: #fef9c3; color: #b45309; }
+  .pill-waiting { background: #fce7f3; color: #9d174d; }
+  .pill-dont    { background: #fee2e2; color: #b91c1c; font-weight: 700; }
+
+  .priority-high   { color: #ef4444; font-weight: 700; font-size: 11px; }
+  .priority-medium { color: #f59e0b; font-weight: 700; font-size: 11px; }
+  .priority-low    { color: #94a3b8; font-size: 11px; }
+  .priority-none   { color: #cbd5e1; font-size: 11px; }
+
+  .credits-val { font-weight: 700; color: #0f3460; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .pagination-info { font-size: 12px; color: #94a3b8; }
+  .pagination-btns { display: flex; gap: 6px; }
+  .page-btn { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; background: white; color: #374151; }
+  .page-btn:hover:not(:disabled) { background: #f1f5f9; }
+  .page-btn.active { background: #0f3460; color: white; border-color: #0f3460; }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .empty-state { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Sterling &amp; Associates — SEO Task Dashboard</h1>
+    <p>Freedcamp project data · Beta export · All tasks &amp; subtasks</p>
+  </div>
+  <div class="header-right">Last export: May 2026</div>
+</div>
+
+<div class="container">
+
+  <!-- SCORECARDS -->
+  <div class="scorecards">
+    <div class="card blue">
+      <div class="card-label">Total Tasks</div>
+      <div class="card-value" id="sc-total">—</div>
+      <div class="card-sub" id="sc-total-sub"></div>
+    </div>
+    <div class="card green">
+      <div class="card-label">Completed</div>
+      <div class="card-value" id="sc-done">—</div>
+      <div class="card-sub" id="sc-done-pct"></div>
+    </div>
+    <div class="card orange">
+      <div class="card-label">In Progress</div>
+      <div class="card-value" id="sc-active">—</div>
+      <div class="card-sub">Currently doing</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Waiting / Blocked</div>
+      <div class="card-value" id="sc-waiting">—</div>
+      <div class="card-sub">Waiting or not started</div>
+    </div>
+    <div class="card purple">
+      <div class="card-label">Total Credits</div>
+      <div class="card-value" id="sc-credits">—</div>
+      <div class="card-sub" id="sc-hours"></div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-card">
+    <h3>Credits by Assignee</h3>
+    <div style="position:relative;height:240px;">
+      <canvas id="chartAssignee"></canvas>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <label>Filter:</label>
+    <select id="filterTaskList">
+      <option value="">All Task Lists</option>
+      <option value="Current Tasks">Current Tasks</option>
+      <option value="Backlog">Backlog</option>
+      <option value="Archive">Archive</option>
+    </select>
+    <select id="filterStatus">
+      <option value="">All Statuses</option>
+      <option value="Done">Done</option>
+      <option value="Doing">Doing</option>
+      <option value="Ready to Start">Ready to Start</option>
+      <option value="Waiting - Client">Waiting - Client</option>
+      <option value="Don't Start">Don't Start</option>
+    </select>
+    <select id="filterMonth">
+      <option value="">All Months</option>
+      <option value="5 - May">May</option>
+      <option value="2 - Feb">Feb</option>
+      <option value="1 - Jan">Jan</option>
+      <option value="0 - Unassigned">Unassigned</option>
+    </select>
+    <select id="filterAssignee">
+      <option value="">All Assignees</option>
+    </select>
+    <select id="filterType">
+      <option value="">Tasks + Subtasks</option>
+      <option value="Task">Tasks only</option>
+    </select>
+    <button class="btn-reset" onclick="resetAll()">Reset</button>
+    <span class="filter-info" id="filterInfo"></span>
+  </div>
+
+  <!-- FLAGS (counts update to reflect current filtered view) -->
+  <div class="flags-section">
+    <div class="flags-header">
+      <span>⚑</span>
+      <h4>Flagged Issues</h4>
+      <span>— counts reflect current view · click to drill in · click again to clear</span>
+    </div>
+    <div class="flags-grid" id="flagsGrid"></div>
+  </div>
+
+  <!-- TASK TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Task List <span id="table-count" style="color:#94a3b8;font-weight:400;"></span></h3>
+      <span id="viewBadge" style="display:none;"></span>
+      <input class="search-box" id="searchBox" type="text" placeholder="Search tasks…" oninput="renderTable()">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Task Name</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Month</th>
+          <th>Est. Min</th>
+          <th>Credits</th>
+          <th>Due Date</th>
+          <th>Task List</th>
+        </tr>
+      </thead>
+      <tbody id="taskTableBody"></tbody>
+    </table>
+    <div class="pagination">
+      <div class="pagination-info" id="paginationInfo"></div>
+      <div class="pagination-btns" id="paginationBtns"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RAW_TASKS = [{"type": "Task", "subtask_of": "", "task_list": "Backlog", "name": "Sterling & Associates Website Updates \u2013 Staffing Change", "assigned_to": "Jordan Blake", "priority": "None", "status": "Waiting - Client", "progress": 50.0, "start_date": "2026-02-11", "due_date": "2026-03-18", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69521823", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.25, "has_description": true}, {"type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Website Architecture Restructuring and Optimization", "assigned_to": "Chris Davis", "priority": "None", "status": "Doing", "progress": 50.0, "start_date": "2026-03-01", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69291448", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 360.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Website Architecture Restructuring and Optimization", "task_list": "Current Tasks", "name": "Create Optimized Website Structure Plan", "assigned_to": "Chris Davis", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "2026-03-06", "date_completed": "2026-03-06", "url": "https://freedcamp.com/view/3686176/tasks/69291596", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 120.0, "credits": 3.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Website Architecture Restructuring and Optimization", "task_list": "Current Tasks", "name": "Update all Website URLs to New Planned Architecture", "assigned_to": "Jordan Blake", "priority": "None", "status": "Ready to Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69291601", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 60.0, "credits": 0.5, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Website Architecture Restructuring and Optimization", "task_list": "Current Tasks", "name": "Implement Redirects for all Changed URLs", "assigned_to": "Jordan Blake", "priority": "High", "status": "Doing", "progress": 50.0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69291604", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 60.0, "credits": 0.5, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Website Architecture Restructuring and Optimization", "task_list": "Current Tasks", "name": "Fix Internal 301 Redirects for all Changed URLs", "assigned_to": "Jordan Blake", "priority": "High", "status": "Doing", "progress": 50.0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69291610", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 120.0, "credits": 1.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Website Architecture Restructuring and Optimization", "task_list": "Current Tasks", "name": "Submit Updated Sitemap to Google Search Console", "assigned_to": "Jordan Blake", "priority": "Medium", "status": "Doing", "progress": 50.0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69291629", "tags": "Technical SEO", "month": "5 - May", "est_minutes": 10.0, "credits": 0.0, "has_description": true}, {"type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "Homepage Content Optimization", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Ready to Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69429239", "tags": "Content", "month": "5 - May", "est_minutes": 180.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Homepage Content Optimization", "task_list": "Current Tasks", "name": "Create Homepage Content Recommendations", "assigned_to": "Chris Davis", "priority": "Low", "status": "Ready to Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69499172", "tags": "Content", "month": "5 - May", "est_minutes": 60.0, "credits": 1.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Homepage Content Optimization", "task_list": "Current Tasks", "name": "Send Homepage Recommendations to Client for Approval", "assigned_to": "Jamie Rivera", "priority": "Low", "status": "Don't Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69499176", "tags": "Content", "month": "5 - May", "est_minutes": 10.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Homepage Content Optimization", "task_list": "Current Tasks", "name": "Publish Homepage Content Recommendations", "assigned_to": "Jordan Blake", "priority": "Low", "status": "Don't Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69499183", "tags": "Content", "month": "5 - May", "est_minutes": 120.0, "credits": 1.5, "has_description": false}, {"type": "Task", "subtask_of": "", "task_list": "Current Tasks", "name": "GBP Optimization Signals", "assigned_to": "Ryan Patel", "priority": "Low", "status": "Ready to Start", "progress": 0, "start_date": "", "due_date": "2026-03-06", "date_completed": "", "url": "https://freedcamp.com/view/3686176/tasks/69827421", "tags": "Local SEO/GBP", "month": "5 - May", "est_minutes": 0.0, "credits": 2.5, "has_description": false}, {"type": "Task", "subtask_of": "", "task_list": "Archive", "name": "2026 January", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-02-02", "url": "https://freedcamp.com/view/3686176/tasks/68418276", "tags": "", "month": "2 - Feb", "est_minutes": 1.0, "credits": 5.75, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Implement Entity Clouds on the Website", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-30", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418278", "tags": "", "month": "2 - Feb", "est_minutes": 15.0, "credits": 1.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Create SEO Optimized Company Descriptions", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-30", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/68418279", "tags": "", "month": "2 - Feb", "est_minutes": 60.0, "credits": 0.5, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Set up SEO Dashboard", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-30", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68418280", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Set up \"Click-to-Call\" and Call Tracking for Website", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-31", "date_completed": "2026-02-01", "url": "https://freedcamp.com/view/3686176/tasks/68418281", "tags": "", "month": "2 - Feb", "est_minutes": 60.0, "credits": 0.3569, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Set up Google Analytics (GA4) + Conversion Tracking", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-31", "date_completed": "2026-02-01", "url": "https://freedcamp.com/view/3686176/tasks/68418282", "tags": "", "month": "2 - Feb", "est_minutes": 60.0, "credits": 0.1245, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Set up Microsoft Clarity Tracking & Tagging", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "2026-01-31", "date_completed": "2026-02-01", "url": "https://freedcamp.com/view/3686176/tasks/68418283", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.1245, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Fix Sterling & Associates Website Form Submission Issue", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-15", "due_date": "2026-01-30", "date_completed": "2026-01-12", "url": "https://freedcamp.com/view/3686176/tasks/68869654", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 1.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Migrate SEO Plugin to SEOPress", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-13", "due_date": "2026-01-16", "date_completed": "2026-01-15", "url": "https://freedcamp.com/view/3686176/tasks/68941557", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.5, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Technical SEO Fixes for CNL", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-02-02", "url": "https://freedcamp.com/view/3686176/tasks/69043652", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 3.75, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "404 Errors in Google Search Console", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-21", "url": "https://freedcamp.com/view/3686176/tasks/69043662", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.125, "has_description": true}, {"type": "|---Subtask", "subtask_of": "404 Errors in Google Search Console", "task_list": "Archive", "name": "Index Pages in GSC", "assigned_to": "Casey Morgan, Sam Kim", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-27", "url": "https://freedcamp.com/view/3686176/tasks/69054979", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Indexable Pages with Duplicate H1 Headings", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69043672", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0625, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Indexable Pages with Duplicate H1 Headings", "task_list": "Archive", "name": "Email the Client for Clarification", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69044264", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "H-tags Not Being Inserted in Chronologically Descending Order", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69043677", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Page Title Recommendation for Homepage", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043681", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.125, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Page Title Recommendation for Homepage", "task_list": "Archive", "name": "Email the Client About Homepage Changes", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-20", "due_date": "2026-01-20", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69094077", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Presence of Broken Backlinks", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-21", "url": "https://freedcamp.com/view/3686176/tasks/69043766", "tags": "", "month": "1 - Jan", "est_minutes": 5.0, "credits": 0.0625, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Use of Infinite Scroll on Blog Category", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69043929", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Non-200 Status URLs in Sitemaps", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043935", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Absence of an HTML Sitemap (Skipped)", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69043941", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Meta Description Recommendation for Homepage", "assigned_to": "Priya Sharma", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69044006", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.125, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Meta Description Recommendation for Homepage", "task_list": "Archive", "name": "Implementation of Meta Descriptions", "assigned_to": "Sam Kim, Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-30", "due_date": "2026-01-31", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69282600", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Footer Navigation Recommendations", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69044011", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "301 Redirects Present Internally", "assigned_to": "Sam Kim", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/69044017", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.5, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Technical SEO Fixes for CNL", "task_list": "Archive", "name": "Set these pages to no-index.", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-31", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69184662", "tags": "", "month": "0 - Unassigned", "est_minutes": 0.0, "credits": 0.125, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "Create Premium Press Release 1 for Sterling & Associates", "assigned_to": "Unassigned", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "2026-01-22", "due_date": "2026-01-27", "date_completed": "2026-02-10", "url": "https://freedcamp.com/view/3686176/tasks/69094498", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 3.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create Premium Press Release 1 for Sterling & Associates", "task_list": "Archive", "name": "Write copy for press release 1 for Sterling & Associates (Premium)", "assigned_to": "Alex Turner", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "2026-01-22", "due_date": "2026-01-27", "date_completed": "2026-01-25", "url": "https://freedcamp.com/view/3686176/tasks/69094499", "tags": "", "month": "1 - Jan", "est_minutes": 60.0, "credits": 0.75, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create Premium Press Release 1 for Sterling & Associates", "task_list": "Archive", "name": "Publish Press Release 1 for Sterling & Associates", "assigned_to": "Marcus Chen, Sam Kim", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "2026-01-22", "due_date": "2026-01-27", "date_completed": "2026-02-10", "url": "https://freedcamp.com/view/3686176/tasks/69094500", "tags": "", "month": "1 - Jan", "est_minutes": 10.0, "credits": 3.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create Premium Press Release 1 for Sterling & Associates", "task_list": "Archive", "name": "Send Press Release 1 Link for Sterling & Associates", "assigned_to": "Marcus Chen, Sam Kim", "priority": "Low", "status": "Done", "progress": 100.0, "start_date": "2026-01-22", "due_date": "2026-01-27", "date_completed": "2026-02-10", "url": "https://freedcamp.com/view/3686176/tasks/69094501", "tags": "", "month": "1 - Jan", "est_minutes": 10.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create Premium Press Release 1 for Sterling & Associates", "task_list": "Archive", "name": "Add Published Press Release 1 to Press Release Directory", "assigned_to": "Marcus Chen, Sam Kim", "priority": "Low", "status": "Done", "progress": 100.0, "start_date": "2026-01-22", "due_date": "2026-01-27", "date_completed": "2026-02-10", "url": "https://freedcamp.com/view/3686176/tasks/69094502", "tags": "", "month": "1 - Jan", "est_minutes": 5.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 January", "task_list": "Archive", "name": "GBP (Audit) Optimization Tasks", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-02-02", "url": "https://freedcamp.com/view/3686176/tasks/69188231", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 3.5, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Set Up Recurring Local Pack Scans for Sterling & Associates", "assigned_to": "Ryan Patel", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-01", "due_date": "2026-02-04", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68980173", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send Business Descriptions to the Client and Have it Approved", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/69188372", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|---Subtask", "subtask_of": "Send Business Descriptions to the Client and Have it Approved", "task_list": "Archive", "name": "Add Business Description to GBP", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69199564", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send List of Service Areas to the Client for Review", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69188554", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Create UTM Tracking for Sterling & Associates Firm Homepage", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69188650", "tags": "", "month": "1 - Jan", "est_minutes": 0.1, "credits": 0.0625, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Request Client for Booking and Appointments URLs", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69188656", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Review Existing Social Profile Links", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-29", "url": "https://freedcamp.com/view/3686176/tasks/69188707", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0625, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Add Business Logo", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-27", "url": "https://freedcamp.com/view/3686176/tasks/69188728", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0625, "has_description": false}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Create a Cover Photo", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69188730", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.125, "has_description": false}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Request Photos to the Client [Interior and exterior]", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69188995", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send a Additional Secondary Categories Recommendations to the Client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189060", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "GBP Products Tasks", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189077", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0, "has_description": true}, {"type": "|---Subtask", "subtask_of": "GBP Products Tasks", "task_list": "Archive", "name": "Create GBP Product Descriptions", "assigned_to": "Priya Sharma", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189082", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 1.25, "has_description": true}, {"type": "|---Subtask", "subtask_of": "GBP Products Tasks", "task_list": "Archive", "name": "Create URLs with UTM Tracking", "assigned_to": "Marcus Chen, Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189087", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.125, "has_description": false}, {"type": "|---Subtask", "subtask_of": "GBP Products Tasks", "task_list": "Archive", "name": "Add Images to GBP Products", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189091", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0625, "has_description": false}, {"type": "|---Subtask", "subtask_of": "GBP Products Tasks", "task_list": "Archive", "name": "Send GBP Products Descriptions, UTM Links, and Images to Client for Review", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189105", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|---Subtask", "subtask_of": "GBP Products Tasks", "task_list": "Archive", "name": "Add GBP Products to GBP", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-30", "date_completed": "2026-02-06", "url": "https://freedcamp.com/view/3686176/tasks/69429798", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.125, "has_description": false}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send Services Research to the Client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189132", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send Competitor Audit to the Client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69189269", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP (Audit) Optimization Tasks", "task_list": "Archive", "name": "Send GBP Audit to the Client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-28", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69199660", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "Task", "subtask_of": "", "task_list": "Archive", "name": "Project Onboarding", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418287", "tags": "", "month": "1 - Jan", "est_minutes": 1.0, "credits": 6.5, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Analysis - Website Technical SEO Audit", "assigned_to": "Tyler Ross, Chris Davis", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-18", "url": "https://freedcamp.com/view/3686176/tasks/68418288", "tags": "", "month": "1 - Jan", "est_minutes": 120.0, "credits": 2.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Analysis - SERP-Based Local Competitor Research", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-27", "url": "https://freedcamp.com/view/3686176/tasks/68418289", "tags": "", "month": "1 - Jan", "est_minutes": 120.0, "credits": 2.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Analysis - Content Audit & Recommendations", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-25", "url": "https://freedcamp.com/view/3686176/tasks/68418290", "tags": "", "month": "1 - Jan", "est_minutes": 120.0, "credits": 1.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Analysis - Google Business Profile Audit", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-27", "url": "https://freedcamp.com/view/3686176/tasks/68418291", "tags": "", "month": "1 - Jan", "est_minutes": 120.0, "credits": 1.5, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Create a Marketer Center's Business Profile", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68418292", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Set up and Configure Bing Webmaster Tools", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418294", "tags": "", "month": "1 - Jan", "est_minutes": 1.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Set up and Configure Bing Webmaster Tools", "task_list": "Archive", "name": "Add Domain", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418295", "tags": "", "month": "1 - Jan", "est_minutes": 10.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Set up and Configure Bing Webmaster Tools", "task_list": "Archive", "name": "Submit Sitemap", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418296", "tags": "", "month": "1 - Jan", "est_minutes": 10.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Set up and Configure Bing Webmaster Tools", "task_list": "Archive", "name": "Run a Site Scan", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418297", "tags": "", "month": "1 - Jan", "est_minutes": 10.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Create Press Advantage Profile", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68418298", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Add Client Site to SEO Crawl", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418305", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Get Client to Create Branded Gmail Account", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-21", "url": "https://freedcamp.com/view/3686176/tasks/68418306", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Create a Chat GPT Copywriter", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68418307", "tags": "", "month": "1 - Jan", "est_minutes": 60.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create a Chat GPT Copywriter", "task_list": "Archive", "name": "Create company profile", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/68869690", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Create GHL sub-account", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68418308", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Customize roadmap for client's budget + specific scenario", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-29", "url": "https://freedcamp.com/view/3686176/tasks/68418309", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Canva Project Folder Setup", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418310", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Set up SERP Keyword Tracking Reports", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-25", "url": "https://freedcamp.com/view/3686176/tasks/68418311", "tags": "", "month": "1 - Jan", "est_minutes": 20.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Set up Geo Grid Keyword Tracking Reports", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418312", "tags": "", "month": "1 - Jan", "est_minutes": 20.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Identify and Confirm Google Maps KWs to track", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418313", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Confirm Negative Keywords, if Any?", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418314", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Identify and Confirm Top High Volume Keywords to Track", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418315", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Create Session Splitter", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-07", "url": "https://freedcamp.com/view/3686176/tasks/68418316", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Create Session Splitter", "task_list": "Archive", "name": "Add email filters to branded Gmail account once you set up session splitter for this client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-21", "url": "https://freedcamp.com/view/3686176/tasks/68418332", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Onboarding", "task_list": "Archive", "name": "Get Branded Gmail Account Added to GBP", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-21", "url": "https://freedcamp.com/view/3686176/tasks/68418317", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "Task", "subtask_of": "", "task_list": "Archive", "name": "Project Set-Up", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418318", "tags": "", "month": "1 - Jan", "est_minutes": 1.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Add to Project Management System", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2025-12-22", "url": "https://freedcamp.com/view/3686176/tasks/68418319", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Create Google Drive Project Folders", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2025-12-22", "url": "https://freedcamp.com/view/3686176/tasks/68418320", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Create Hubstaff project", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2025-12-22", "url": "https://freedcamp.com/view/3686176/tasks/68418321", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Create Client \"Incoming\" Folder (Setup & Share With Client's Email)", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2025-12-22", "url": "https://freedcamp.com/view/3686176/tasks/68418322", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Create SEO Work Report", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/68418323", "tags": "", "month": "1 - Jan", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Send Client Welcome Email", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2025-12-22", "url": "https://freedcamp.com/view/3686176/tasks/68418324", "tags": "", "month": "1 - Jan", "est_minutes": 20.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Set Up Onboarding / Client Discovery Call (via  Google Meet)", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-16", "url": "https://freedcamp.com/view/3686176/tasks/68418325", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Save High Res Company Logo to Google Drive", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418326", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Get Onboarding Questionnaire Completed", "assigned_to": "Sofia Martinez", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-16", "url": "https://freedcamp.com/view/3686176/tasks/68418327", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Verify Access to Website Admin", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418328", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Verify Access to Google Search Console", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418329", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Verify Access to Google Tag Manager", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418330", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Verify Access to Google Analytics", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-06", "url": "https://freedcamp.com/view/3686176/tasks/68418331", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "Project Set-Up", "task_list": "Archive", "name": "Complete Freedcamp Wiki", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-05", "due_date": "2026-01-16", "date_completed": "2026-01-26", "url": "https://freedcamp.com/view/3686176/tasks/68814460", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "Task", "subtask_of": "", "task_list": "Archive", "name": "2026 February", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-02-06", "url": "https://freedcamp.com/view/3686176/tasks/69429906", "tags": "", "month": "0 - Unassigned", "est_minutes": 0.0, "credits": 0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Check if Entity Clouds has provided the entities for this client", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "2026-02-09", "date_completed": "2026-02-24", "url": "https://freedcamp.com/view/3686176/tasks/69282381", "tags": "", "month": "2 - Feb", "est_minutes": 10.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Add Service Areas to GBP", "assigned_to": "Sam Kim", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-12", "due_date": "2026-02-18", "date_completed": "2026-02-18", "url": "https://freedcamp.com/view/3686176/tasks/69286447", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Upload Images to GBP", "assigned_to": "Sam Kim", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-01", "due_date": "2026-02-06", "date_completed": "2026-02-18", "url": "https://freedcamp.com/view/3686176/tasks/69286977", "tags": "", "month": "2 - Feb", "est_minutes": 55.0, "credits": 0.25, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Remove Annulment page from website and redirect to homepage", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-01", "due_date": "2026-02-28", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69291096", "tags": "", "month": "2 - Feb", "est_minutes": 5.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Call Tracking Cleanup & Validation", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-02", "due_date": "2026-02-04", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69321699", "tags": "", "month": "2 - Feb", "est_minutes": 60.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Call Tracking Cleanup & Validation", "task_list": "Archive", "name": "Remove GHL Call Tracking Scripts", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-02", "due_date": "2026-02-04", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69321711", "tags": "", "month": "2 - Feb", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Call Tracking Cleanup & Validation", "task_list": "Archive", "name": "Audit & Adjust GTM/GA Call Tracking", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-02", "due_date": "2026-02-04", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69321717", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Call Tracking Cleanup & Validation", "task_list": "Archive", "name": "Update Clarity Tagging and Tracking with Call Rail Numbers", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-02", "due_date": "2026-02-04", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69321731", "tags": "", "month": "2 - Feb", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Call Tracking Cleanup & Validation", "task_list": "Archive", "name": "Review GA4 Conversion Tracking for CallRail", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-02", "due_date": "2026-02-04", "date_completed": "2026-02-04", "url": "https://freedcamp.com/view/3686176/tasks/69321737", "tags": "", "month": "2 - Feb", "est_minutes": 15.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Citation Audit and Cleanup", "assigned_to": "Jamie Rivera", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "2026-01-30", "due_date": "2026-03-06", "date_completed": "2026-03-05", "url": "https://freedcamp.com/view/3686176/tasks/69358856", "tags": "", "month": "1 - Jan", "est_minutes": 15.0, "credits": 1.5, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Update GBP Links with Correct UTM Strategy", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-06", "due_date": "2026-02-11", "date_completed": "2026-02-12", "url": "https://freedcamp.com/view/3686176/tasks/69428141", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.0, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Order Big Citations and Hyper-local Citations for Sterling & Associates", "assigned_to": "Marcus Chen", "priority": "High", "status": "Done", "progress": 100.0, "start_date": "2026-02-06", "due_date": "2026-03-06", "date_completed": "2026-03-05", "url": "https://freedcamp.com/view/3686176/tasks/69429242", "tags": "", "month": "2 - Feb", "est_minutes": 360.0, "credits": 1.5, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Order Big Citations and Hyper-local Citations for Sterling & Associates", "task_list": "Archive", "name": "Optimize Citations - Document Ordered Citations for Kelley Construction", "assigned_to": "Marcus Chen", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "2026-03-06", "date_completed": "2026-03-08", "url": "https://freedcamp.com/view/3686176/tasks/69863539", "tags": "", "month": "2 - Feb", "est_minutes": 240.0, "credits": 1.375, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "GBP Profile Updates (Products and Services)", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-03-05", "url": "https://freedcamp.com/view/3686176/tasks/69429247", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 1.5, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP Profile Updates (Products and Services)", "task_list": "Archive", "name": "Write GBP Service Descriptions", "assigned_to": "Priya Sharma", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-12", "due_date": "2026-02-17", "date_completed": "2026-02-17", "url": "https://freedcamp.com/view/3686176/tasks/69541276", "tags": "", "month": "2 - Feb", "est_minutes": 240.0, "credits": 1.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP Profile Updates (Products and Services)", "task_list": "Archive", "name": "Add GBP Services and Descriptions to GBP", "assigned_to": "Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-18", "due_date": "2026-03-06", "date_completed": "2026-03-05", "url": "https://freedcamp.com/view/3686176/tasks/69541294", "tags": "", "month": "2 - Feb", "est_minutes": 60.0, "credits": 0.25, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP Profile Updates (Products and Services)", "task_list": "Archive", "name": "Review the GBP Service Descriptions", "assigned_to": "Chris Davis", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-18", "due_date": "2026-02-19", "date_completed": "2026-02-18", "url": "https://freedcamp.com/view/3686176/tasks/69541318", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "GBP Profile Updates (Products and Services)", "task_list": "Archive", "name": "Send client a notification to add GBP services to GBP", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-18", "due_date": "2026-02-19", "date_completed": "2026-02-25", "url": "https://freedcamp.com/view/3686176/tasks/69541800", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "GBP Optimization Signals", "assigned_to": "Ryan Patel", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-03-02", "url": "https://freedcamp.com/view/3686176/tasks/69429251", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 2.5, "has_description": false}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Implement Technical Fixes", "assigned_to": "Unassigned", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-02-06", "url": "https://freedcamp.com/view/3686176/tasks/69429927", "tags": "", "month": "2 - Feb", "est_minutes": 0.0, "credits": 0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Lorem Ipsum Content on Indexable Page", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043657", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Lorem Ipsum Content on Indexable Page", "task_list": "Archive", "name": "Email the client for Clarification", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-20", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69044126", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Coverage Errors in Google Search Console", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043658", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Coverage Errors in Google Search Console", "task_list": "Archive", "name": "Index Pages in GSC", "assigned_to": "Sam Kim, Casey Morgan", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69054971", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Indexable Pages with Missing H1 Headings", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043667", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Indexable Pages with Missing H1 Headings", "task_list": "Archive", "name": "Email the Client for Clarification", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69044278", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Indexable Pages with Multiple H1 Headings", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043674", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Indexable Pages with Multiple H1 Headings", "task_list": "Archive", "name": "Email the Client for Clarification", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "", "due_date": "", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69044413", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Indexable Pages with Duplicate Page Titles", "assigned_to": "Priya Sharma", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69043679", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.5, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Indexable Pages with Duplicate Page Titles", "task_list": "Archive", "name": "Email the Client for Clarification", "assigned_to": "Jamie Rivera", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-20", "date_completed": "2026-01-23", "url": "https://freedcamp.com/view/3686176/tasks/69044593", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Indexable Pages with Duplicate Page Titles", "task_list": "Archive", "name": "Implement Meta Descriptions", "assigned_to": "Sam Kim", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-26", "due_date": "2026-01-30", "date_completed": "2026-01-30", "url": "https://freedcamp.com/view/3686176/tasks/69259701", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": true}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Broken Links Present Internally", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043763", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.5, "has_description": true}, {"type": "|---Subtask", "subtask_of": "Broken Links Present Internally", "task_list": "Archive", "name": "Recrawl the Site", "assigned_to": "Tyler Ross", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-02-02", "url": "https://freedcamp.com/view/3686176/tasks/69055039", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.0, "has_description": false}, {"type": "|--Subtask", "subtask_of": "Implement Technical Fixes", "task_list": "Archive", "name": "Robots.txt File Recommendation", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-01-19", "due_date": "2026-01-26", "date_completed": "2026-01-28", "url": "https://freedcamp.com/view/3686176/tasks/69043770", "tags": "", "month": "1 - Jan", "est_minutes": 0.0, "credits": 0.25, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Fix website header Pay Now link and footer section lines", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-11", "due_date": "2026-02-13", "date_completed": "2026-02-13", "url": "https://freedcamp.com/view/3686176/tasks/69522755", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.25, "has_description": true}, {"type": "|-Subtask", "subtask_of": "2026 February", "task_list": "Archive", "name": "Restore Intaker Chat on CNL Website", "assigned_to": "Jordan Blake", "priority": "None", "status": "Done", "progress": 100.0, "start_date": "2026-02-12", "due_date": "2026-02-16", "date_completed": "2026-02-12", "url": "https://freedcamp.com/view/3686176/tasks/69539865", "tags": "", "month": "2 - Feb", "est_minutes": 30.0, "credits": 0.25, "has_description": true}];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let baseFilteredTasks = [];   // result of dropdown filters (or default)
+let displayTasks      = [];   // baseFiltered further narrowed by an active flag
+let activeFlag        = null;
+let currentPage       = 1;
+const PAGE_SIZE       = 20;
+let chartInstance     = null;
+
+// ── Flag definitions ──────────────────────────────────────────────────────────
+const FLAG_DEFS = [
+  { key:'no_priority',    icon:'🚩', label:'No Priority',    danger:false, fn: t => !t.priority || t.priority === 'None' },
+  { key:'no_month',       icon:'📅', label:'No Month',       danger:false, fn: t => t.month === '0 - Unassigned' },
+  { key:'no_est_time',    icon:'⏱',  label:'No Est. Time',   danger:false, fn: t => t.est_minutes === 0 },
+  { key:'no_credits',     icon:'💳', label:'No Credits',     danger:false, fn: t => t.credits === 0 },
+  { key:'no_due_date',    icon:'📌', label:'No Due Date',    danger:false, fn: t => !t.due_date },
+  { key:'no_assignee',    icon:'👤', label:'No Assignee',    danger:false, fn: t => t.assigned_to === 'Unassigned' },
+  { key:'no_description', icon:'📝', label:'No Description', danger:false, fn: t => !t.has_description },
+  { key:'dont_start',     icon:'🚫', label:"Don't Start",    danger:true,  fn: t => t.status === "Don't Start" },
+];
+
+// Which column to highlight when a flag is active
+const FLAG_HIGHLIGHT = {
+  no_priority:    'priority',
+  no_month:       'month',
+  no_est_time:    'est_minutes',
+  no_credits:     'credits',
+  no_due_date:    'due_date',
+  no_assignee:    'assigned_to',
+  no_description: 'name',
+  dont_start:     'status',
+};
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  populateAssigneeFilter();
+  buildFlagGrid();
+  applyDefaultFilter();
+});
+
+function populateAssigneeFilter() {
+  const people = new Set();
+  RAW_TASKS.forEach(t => t.assigned_to.split(',').forEach(p => {
+    const n = p.trim();
+    if (n && n !== 'Unassigned') people.add(n);
+  }));
+  const sel = document.getElementById('filterAssignee');
+  [...people].sort().forEach(n => {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = n; sel.appendChild(o);
+  });
+}
+
+function buildFlagGrid() {
+  const grid = document.getElementById('flagsGrid');
+  FLAG_DEFS.forEach(def => {
+    const btn = document.createElement('button');
+    btn.className = 'flag-btn';
+    btn.id = 'flag-' + def.key;
+    btn.onclick = () => toggleFlag(def.key);
+    btn.innerHTML = `<span>${def.icon}</span>
+      <span>${def.label}</span>
+      <span class="flag-count${def.danger?' danger':''}" id="fcount-${def.key}">0</span>`;
+    grid.appendChild(btn);
+  });
+}
+
+function refreshFlagCounts() {
+  // Counts always reflect the current BASE filtered view (not narrowed by flag)
+  FLAG_DEFS.forEach(def => {
+    const count = baseFilteredTasks.filter(def.fn).length;
+    const countEl = document.getElementById('fcount-' + def.key);
+    if (countEl) countEl.textContent = count;
+    const btn = document.getElementById('flag-' + def.key);
+    if (btn) {
+      btn.classList.toggle('zero', count === 0);
+      if (count === 0 && activeFlag === def.key) {
+        // flag has no items anymore, clear it
+        activeFlag = null;
+        btn.classList.remove('active');
+      }
+    }
+  });
+}
+
+// ── Filter logic ──────────────────────────────────────────────────────────────
+function applyDefaultFilter() {
+  baseFilteredTasks = RAW_TASKS.filter(t => t.month === '5 - May' || t.task_list === 'Backlog');
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+  displayTasks = [...baseFilteredTasks];
+  currentPage = 1;
+  setViewBadge('default');
+  refreshFlagCounts();
+  updateAll();
+}
+
+function applyDropdownFilters() {
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+
+  const f = {
+    taskList: document.getElementById('filterTaskList').value,
+    status:   document.getElementById('filterStatus').value,
+    month:    document.getElementById('filterMonth').value,
+    assignee: document.getElementById('filterAssignee').value,
+    type:     document.getElementById('filterType').value,
+  };
+  const anyActive = Object.values(f).some(Boolean);
+
+  if (!anyActive) { applyDefaultFilter(); return; }
+
+  baseFilteredTasks = RAW_TASKS.filter(t => {
+    if (f.taskList && t.task_list !== f.taskList) return false;
+    if (f.status   && t.status    !== f.status)   return false;
+    if (f.month    && t.month     !== f.month)     return false;
+    if (f.assignee && !t.assigned_to.includes(f.assignee)) return false;
+    if (f.type === 'Task' && t.type !== 'Task')    return false;
+    return true;
+  });
+
+  displayTasks = [...baseFilteredTasks];
+  currentPage  = 1;
+  setViewBadge('filter');
+  refreshFlagCounts();
+  updateAll();
+}
+
+function toggleFlag(key) {
+  const def = FLAG_DEFS.find(d => d.key === key);
+  if (!def) return;
+
+  if (activeFlag === key) {
+    // deselect
+    activeFlag = null;
+    document.getElementById('flag-' + key).classList.remove('active');
+    displayTasks = [...baseFilteredTasks];
+    setViewBadge(document.getElementById('filterTaskList').value ||
+                 document.getElementById('filterStatus').value    ||
+                 document.getElementById('filterMonth').value     ||
+                 document.getElementById('filterAssignee').value  ||
+                 document.getElementById('filterType').value      ? 'filter' : 'default');
+  } else {
+    if (activeFlag) document.getElementById('flag-' + activeFlag).classList.remove('active');
+    activeFlag = key;
+    document.getElementById('flag-' + key).classList.add('active');
+    displayTasks = baseFilteredTasks.filter(def.fn);
+    setViewBadge('flag', def.label);
+  }
+
+  currentPage = 1;
+  updateAll();
+}
+
+function resetAll() {
+  activeFlag = null;
+  document.querySelectorAll('.flag-btn').forEach(b => b.classList.remove('active'));
+  ['filterTaskList','filterStatus','filterMonth','filterAssignee','filterType'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('searchBox').value = '';
+  applyDefaultFilter();
+}
+
+function setViewBadge(mode, label) {
+  const el = document.getElementById('viewBadge');
+  if (mode === 'default') {
+    el.className = 'view-badge';
+    el.innerHTML = '📋 May &amp; Backlog <button onclick="resetAll()">×</button>';
+    el.style.display = 'inline-flex';
+  } else if (mode === 'flag') {
+    el.className = 'view-badge flag-view';
+    el.innerHTML = `⚑ ${label} <button onclick="resetAll()">×</button>`;
+    el.style.display = 'inline-flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── Scorecards ────────────────────────────────────────────────────────────────
+function updateScorecards() {
+  const t = displayTasks;
+  const done    = t.filter(x => x.status === 'Done').length;
+  const active  = t.filter(x => x.status === 'Doing').length;
+  const waiting = t.filter(x => ['Waiting - Client',"Don't Start",'Ready to Start'].includes(x.status)).length;
+  const credits = t.reduce((s,x) => s + x.credits, 0);
+  const mins    = t.reduce((s,x) => s + x.est_minutes, 0);
+  const pct     = t.length ? Math.round(done/t.length*100) : 0;
+
+  document.getElementById('sc-total').textContent    = t.length;
+  document.getElementById('sc-total-sub').textContent = `${t.filter(x=>x.type==='Task').length} parent · ${t.filter(x=>x.type!=='Task').length} subtasks`;
+  document.getElementById('sc-done').textContent     = done;
+  document.getElementById('sc-done-pct').textContent = `${pct}% completion rate`;
+  document.getElementById('sc-active').textContent   = active;
+  document.getElementById('sc-waiting').textContent  = waiting;
+  document.getElementById('sc-credits').textContent  = credits.toFixed(2);
+  document.getElementById('sc-hours').textContent    = `${(mins/60).toFixed(1)} est. hours`;
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+function updateChart() {
+  const byPerson = {};
+  displayTasks.forEach(t => t.assigned_to.split(',').forEach(p => {
+    const n = p.trim() || 'Unassigned';
+    byPerson[n] = (byPerson[n]||0) + t.credits;
+  }));
+  const sorted = Object.entries(byPerson).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const colors = ['#0f3460','#1e4d8c','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#f0f4f8','#e2e8f0','#cbd5e1'];
+  const ctx = document.getElementById('chartAssignee');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: sorted.map(x=>x[0]),
+      datasets:[{ label:'Credits', data:sorted.map(x=>+x[1].toFixed(2)), backgroundColor:colors.slice(0,sorted.length), borderRadius:5 }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ beginAtZero:true, grid:{ color:'#f1f5f9' }, ticks:{ font:{ size:11 } } },
+        y:{ grid:{ display:false }, ticks:{ font:{ size:12 } } }
+      }
+    }
+  });
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+function pillClass(s) {
+  return { Done:'pill-done', Doing:'pill-doing', 'Ready to Start':'pill-ready',
+           'Waiting - Client':'pill-waiting', "Don't Start":'pill-dont' }[s] || 'pill-dont';
+}
+function prioritySpan(p) {
+  const cls = { High:'priority-high',Medium:'priority-medium',Low:'priority-low',None:'priority-none' }[p]||'priority-none';
+  return `<span class="${cls}">${p||'—'}</span>`;
+}
+function depthIndent(type) {
+  if (type==='Task') return '';
+  return '&nbsp;'.repeat((type.match(/\|/g)||[]).length*3) + '↳ ';
+}
+
+function renderTable() {
+  const search = document.getElementById('searchBox').value.toLowerCase().trim();
+  const rows   = search ? displayTasks.filter(t=>t.name.toLowerCase().includes(search)) : displayTasks;
+
+  const total      = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total/PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start    = (currentPage-1)*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('table-count').textContent    = `(${total})`;
+  document.getElementById('paginationInfo').textContent = total
+    ? `Showing ${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}`
+    : '';
+
+  // Determine which column to highlight (if any flag active)
+  const hlCol = activeFlag ? FLAG_HIGHLIGHT[activeFlag] : null;
+
+  const tbody = document.getElementById('taskTableBody');
+  if (!pageRows.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No tasks match.</div></td></tr>';
+  } else {
+    tbody.innerHTML = pageRows.map(t => {
+      // h(col) returns 'hl' class string if this column should be highlighted for THIS row
+      const needsHl = hlCol && FLAG_DEFS.find(d=>d.key===activeFlag)?.fn(t);
+      const h = col => (needsHl && hlCol===col) ? ' class="hl"' : '';
+
+      const nameHtml = t.url
+        ? `${depthIndent(t.type)}<a href="${t.url}" target="_blank">${t.name}</a>`
+        : `${depthIndent(t.type)}${t.name}`;
+      const month    = t.month.replace(/^\d+ - /,'') || '—';
+      const credits  = t.credits > 0 ? `<span class="credits-val">${t.credits}</span>` : '—';
+      const dueDate  = t.due_date ? t.due_date.substring(0,10) : '—';
+
+      return `<tr>
+        <td class="task-name${hlCol==='name'&&needsHl?' hl':''}">${nameHtml}</td>
+        <td style="font-size:12px;"${h('assigned_to')}>${t.assigned_to||'Unassigned'}</td>
+        <td${h('status')}><span class="pill ${pillClass(t.status)}">${t.status}</span></td>
+        <td${h('priority')}>${prioritySpan(t.priority)}</td>
+        <td style="font-size:12px;color:#64748b;"${h('month')}>${month}</td>
+        <td style="font-size:12px;color:#64748b;"${h('est_minutes')}>${t.est_minutes||'—'}</td>
+        <td${h('credits')}>${credits}</td>
+        <td style="font-size:12px;color:#64748b;"${h('due_date')}>${dueDate}</td>
+        <td style="font-size:11px;color:#64748b;">${t.task_list}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('filterInfo').textContent =
+    displayTasks.length === RAW_TASKS.length
+      ? `All ${RAW_TASKS.length} tasks`
+      : `${displayTasks.length} of ${RAW_TASKS.length} tasks`;
+
+  // Pagination buttons
+  const btns = document.getElementById('paginationBtns');
+  let html = `<button class="page-btn" onclick="changePage(-1)" ${currentPage===1?'disabled':''}>← Prev</button>`;
+  for (let i=Math.max(1,currentPage-2); i<=Math.min(totalPages,currentPage+2); i++)
+    html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  html += `<button class="page-btn" onclick="changePage(1)" ${currentPage===totalPages?'disabled':''}>Next →</button>`;
+  btns.innerHTML = html;
+}
+
+function changePage(d) { currentPage += d; renderTable(); }
+function goPage(p)      { currentPage  = p; renderTable(); }
+function updateAll()    { updateScorecards(); updateChart(); renderTable(); }
+
+['filterTaskList','filterStatus','filterMonth','filterAssignee','filterType'].forEach(id =>
+  document.getElementById(id).addEventListener('change', applyDropdownFilters)
+);
+</script>
+</body>
+</html>
